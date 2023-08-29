@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+
+    </style>
+</head>
+<body>
+<div>
+    <button id="btn-send-mail" class="btn btn-light">send mail</button>
+    <div id="valid-form" style="display: none">
+        <input type="text" id="ipt-auth"/>
+        <button id="btn-auth-valid" class="btn btn-light">valid</button>
+    </div>
+</div>
+</body>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js" ></script>
+<script type="text/javascript">
+    let match = "";
+
+    const sendMail = (e) => {
+        e.preventDefault();
+        fetch("/mail", {method: "POST"}).then(response => response.json()
+        .then(data => {
+            console.log(data);
+            match = data.match;
+        })).then(() => {
+            document.querySelector("#valid-form").style.display = "block";
+        });
+    };
+
+    const authValid = (e) => {
+        e.preventDefault();
+        console.log(match);
+        const authNum = document.querySelector("#ipt-auth").value;
+        fetch(`/mail/valid?match=${match}&authNum=${authNum}`)
+        .then(response => response.json()
+        .then(data => {
+            if(data) alert("인증 성공");
+            else alert("인증 실패");
+        }));
+    };
+
+    document.querySelector("#btn-send-mail").addEventListener("click", e => sendMail(e));
+    document.querySelector("#btn-auth-valid").addEventListener("click", e => authValid(e));
+    window.addEventListener("load", (e) => {} );
+</script>
+</html>
