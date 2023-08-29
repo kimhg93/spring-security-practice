@@ -63,8 +63,6 @@ public class TestController {
 
     @GetMapping("/mail/valid")
     public ResponseEntity<Boolean> mailValid(String match, String authNum){
-        System.err.println(match);
-        System.err.println(authNum);
         return ResponseEntity.ok().body(valid(match, authNum));
     }
 
