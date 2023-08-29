@@ -2,6 +2,10 @@ package com.spring.security.config;
 
 import com.spring.security.authentication.CustomOAuth2UserService;
 import com.spring.security.authentication.FormUserDetailService;
+import com.spring.security.authentication.AccessDeniedHandlerImpl;
+import com.spring.security.authentication.AuthenticationEntryPointImpl;
+import com.spring.security.jwt.JwtAuthenticationFilter;
+import com.spring.security.jwt.JwtTokenProvider;
 import com.spring.security.persistence.FormMemberRepository;
 import com.spring.security.persistence.OAuthMemberRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,15 +19,16 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @RequiredArgsConstructor
-//@Conditional(PasswordFactorCondition.class)
 @Slf4j
 public class SecurityConfig {
 
     private final FormMemberRepository formMemberRepository;
     private final OAuthMemberRepository oAuthMemberRepository;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @Bean
     public PasswordEncoder passwordEncoder(){
@@ -34,8 +39,12 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeRequests()
-                .antMatchers("/login/**", "/oauth2/**").permitAll()
+                .antMatchers(getNonAuthPattern()).permitAll()
                 .anyRequest().authenticated()
+                .and()
+                .exceptionHandling()
+                .authenticationEntryPoint(customAuthenticationEntryPoint())
+                .accessDeniedHandler(customAccessDeniedHandler())
                 .and()
 
                 //form login
@@ -55,9 +64,19 @@ public class SecurityConfig {
                         .userInfoEndpoint()
                         .userService(oAuth2UserService()))
 
+                .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
+
                 .csrf().disable();
 
         return http.build();
+    }
+
+    private String[] getNonAuthPattern(){
+        return new String[] {"/login/**"
+                , "/oauth2/**"
+                , "/auth/**"
+                , "/mail/**"
+                , "/favicon.ico"};
     }
 
     @Bean
@@ -78,6 +97,20 @@ public class SecurityConfig {
         return authProvider;
     }
 
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter(){
+        return new JwtAuthenticationFilter(jwtTokenProvider);
+    }
+
+    @Bean
+    public AuthenticationEntryPointImpl customAuthenticationEntryPoint(){
+        return new AuthenticationEntryPointImpl();
+    }
+
+    @Bean
+    public AccessDeniedHandlerImpl customAccessDeniedHandler(){
+        return new AccessDeniedHandlerImpl();
+    }
 
 //    OAuth JavaConfig
 //

@@ -1,27 +1,32 @@
 package com.spring.security.controller;
 
 
+import com.spring.security.authentication.FormUserDetail;
+import com.spring.security.domain.TokenMember;
+import com.spring.security.jwt.JwtToken;
+import com.spring.security.jwt.JwtTokenProvider;
+import com.spring.security.mail.CustomMailSender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jasypt.encryption.pbe.StandardPBEStringEncryptor;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
+import org.springframework.util.Base64Utils;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.util.UriComponentsBuilder;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
+import org.springframework.web.servlet.ModelAndView;
 
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryMXBean;
-import java.lang.management.MemoryUsage;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,7 +36,37 @@ import java.util.Map;
 @Slf4j
 public class TestController {
 
+    private final AuthenticationManagerBuilder authenticationManagerBuilder;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final CustomMailSender mailSender;
 
+
+    @GetMapping("/mail")
+    public ModelAndView mailView(){
+        ModelAndView mv = new ModelAndView();
+        mv.setViewName("/mail");
+        return mv;
+    }
+
+    @PostMapping("/mail")
+    public ResponseEntity<Map<String, Object>> mail() {
+        int randomNumber = (int) (Math.random()*1000000)+1;
+        String randomStr = Integer.toString(randomNumber);
+
+        mailSender.send(randomStr);
+
+        Map<String, Object> map = new HashMap<>();
+        map.put("match", encrypt(randomStr));
+
+        return ResponseEntity.ok().body(map);
+    }
+
+    @GetMapping("/mail/valid")
+    public ResponseEntity<Boolean> mailValid(String match, String authNum){
+        System.err.println(match);
+        System.err.println(authNum);
+        return ResponseEntity.ok().body(valid(match, authNum));
+    }
 
     @GetMapping(value = "/login")
     public String testPage(){
@@ -45,7 +80,50 @@ public class TestController {
         return ResponseEntity.ok().body(authentication.toString());
     }
 
+    @CrossOrigin
+    @GetMapping(value = "/auth/token")
+    public ResponseEntity<JwtToken> generate(TokenMember tokenDto, HttpServletResponse res) {
+        log.info("generate controller: {}, {}", tokenDto.getId(), tokenDto.getName());
 
+        Map<String, Object> body = new HashMap<>();
+        body.put("name", "name1234");
+
+        log.info(tokenDto.toString());
+
+        FormUserDetail userDetail = new FormUserDetail();
+        userDetail.setUsername(tokenDto.getId());
+        userDetail.setAuthorities(Collections.singleton(new SimpleGrantedAuthority("ROLE_ADMIN")));
+
+
+        Authentication authentication = new UsernamePasswordAuthenticationToken(userDetail, tokenDto.getName());
+
+
+        JwtToken jwtToken = jwtTokenProvider.generateToken(authentication, body);
+
+        log.info("Generate accessToken: {}", jwtToken.getAccessToken());
+        log.info("Generate refreshToken: {}", jwtToken.getRefreshToken());
+        String reToken = jwtToken.getAccessToken();
+
+        //encryptTest("apiPracticeTest1234");
+        HttpHeaders headers = new HttpHeaders();
+        headers.setAccessControlAllowOrigin(null);
+
+        Cookie cookie = new Cookie("spring-security-practice-at", jwtToken.getAccessToken());
+        cookie.setPath("/");
+        cookie.setHttpOnly(true);
+        res.addCookie(cookie);
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(jwtToken);
+    }
+
+    @GetMapping(value = "/api/test")
+    public ResponseEntity<String> apiTest(HttpServletRequest request){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        log.info("Controller >  " + authentication.toString());
+        return ResponseEntity.ok().body(authentication.toString());
+    }
 
 
 
@@ -95,31 +173,9 @@ public class TestController {
 //    private final JwtTokenProvider jwtTokenProvider;
 //    private String reToken;
 //
-//    @CrossOrigin
-//    @PostMapping(value = "/auth/token")
-//    public ResponseEntity<JwtToken> generate(@RequestBody User tokenDto) {
-//        log.info("(line 50) {}, {}", tokenDto.getId(), tokenDto.getName());
-//
-//        Map<String, Object> body = new HashMap<>();
-//        body.put("name", "name1234");
-//
-//        log.info(tokenDto.toString());
-//
-//        Authentication authentication = new UsernamePasswordAuthenticationToken(tokenDto.getId(), tokenDto.getName());
-//        JwtToken jwtToken = jwtTokenProvider.generateToken(authentication, body);
-//
-//        log.info("Generate accessToken(line 61) : {}", jwtToken.getAccessToken());
-//        log.info("Generate refreshToken(line 62) : {}", jwtToken.getRefreshToken());
-//        reToken = jwtToken.getAccessToken();
-//
-//        encryptTest("apiPracticeTest1234");
-//        HttpHeaders headers = new HttpHeaders();
-//        headers.setAccessControlAllowOrigin(null);
-//
-//        return ResponseEntity.ok()
-//                .headers(headers)
-//                .body(jwtToken);
-//    }
+
+
+
 //
 //    @PostMapping(value = "/api")
 //    public ResponseEntity<Map<String, Object>> postApiTest(@RequestBody String body) {
@@ -156,27 +212,41 @@ public class TestController {
 //    }
 //
 //
-//    public void encryptTest(String key) {
-//        // ek=be sk=be, db=sk db=ek
-//        StandardPBEStringEncryptor encryptor = new StandardPBEStringEncryptor();
-//
-//        encryptor.setAlgorithm("PBEWithMD5AndDES");
-//        encryptor.setPassword("encryptKey123");
-//
-//        log.info("general(line 136) : {}", key);
-//
-//        String base64 = Base64Utils.encodeToString(key.getBytes());
-//        String encrypt = encryptor.encrypt(base64);
-//        log.info("encode base64(line 140) : {}", base64);
-//        log.info("encrypt base64(line 141) : {}", encrypt);
-//
-//
-//        String decrypt = encryptor.decrypt(encrypt);
-//        String decoded = new String(Base64Utils.decodeFromString(decrypt));
-//        log.info("decrypt base64(line 146) : {}", decrypt);
-//        log.info("decode base64(line 147) : {}", decoded);
-//    }
-//
+    public void encryptTest(String key) {
+        // ek=be sk=be, db=sk db=ek
+        StandardPBEStringEncryptor encryptor = new StandardPBEStringEncryptor();
+
+        encryptor.setAlgorithm("PBEWithMD5AndDES");
+        encryptor.setPassword("encryptKey123");
+
+        log.info("general(line 136) : {}", key);
+
+        String base64 = Base64Utils.encodeToString(key.getBytes());
+        String encrypt = encryptor.encrypt(base64);
+        log.info("encode base64(line 140) : {}", base64);
+        log.info("encrypt base64(line 141) : {}", encrypt);
+
+
+        String decrypt = encryptor.decrypt(encrypt);
+        String decoded = new String(Base64Utils.decodeFromString(decrypt));
+        log.info("decrypt base64(line 146) : {}", decrypt);
+        log.info("decode base64(line 147) : {}", decoded);
+    }
+
+    public String encrypt(String str){
+        StandardPBEStringEncryptor encryptor = new StandardPBEStringEncryptor();
+        encryptor.setAlgorithm("PBEWithMD5AndDES");
+        encryptor.setPassword("encryptKey123");
+        return encryptor.encrypt(str);
+    }
+
+    public boolean valid(String encryptStr, String str){
+        StandardPBEStringEncryptor encryptor = new StandardPBEStringEncryptor();
+        encryptor.setAlgorithm("PBEWithMD5AndDES");
+        encryptor.setPassword("encryptKey123");
+        return encryptor.decrypt(encryptStr).equalsIgnoreCase(str);
+    }
+
 //
 //    @GetMapping("/auth/call")
 //    public void test() {
