@@ -1,9 +1,6 @@
 package com.spring.security.config;
 
-import com.spring.security.authentication.CustomOAuth2UserService;
-import com.spring.security.authentication.FormUserDetailService;
-import com.spring.security.authentication.AccessDeniedHandlerImpl;
-import com.spring.security.authentication.AuthenticationEntryPointImpl;
+import com.spring.security.authentication.*;
 import com.spring.security.jwt.JwtAuthenticationFilter;
 import com.spring.security.jwt.JwtTokenProvider;
 import com.spring.security.persistence.FormMemberRepository;
@@ -13,17 +10,44 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDecisionManager;
+import org.springframework.security.access.expression.SecurityExpressionHandler;
+import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler;
+import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
+import org.springframework.security.access.vote.AffirmativeBased;
+import org.springframework.security.access.vote.RoleHierarchyVoter;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.FilterInvocation;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.expression.DefaultWebSecurityExpressionHandler;
+import org.springframework.security.web.access.intercept.FilterSecurityInterceptor;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import java.util.Arrays;
 
 @Configuration
 @RequiredArgsConstructor
+@EnableWebSecurity
+//@Conditional(PasswordFactorCondition.class)
 @Slf4j
+/**
+ * id/pw
+ * oAuth2 (kakao, naver, google, github)
+ * jwt
+ * sms
+ * mail
+ * 인증서
+ * xss
+ * csrf
+ *
+ */
 public class SecurityConfig {
 
     private final FormMemberRepository formMemberRepository;
@@ -31,17 +55,22 @@ public class SecurityConfig {
     private final JwtTokenProvider jwtTokenProvider;
 
     @Bean
-    public PasswordEncoder passwordEncoder(){
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+
                 .authorizeRequests()
+                .antMatchers("/home").hasRole("MEMBER")
+                .antMatchers("/otp", "/otp/**").hasRole("PRE_AUTH_USER")
                 .antMatchers(getNonAuthPattern()).permitAll()
+                .expressionHandler(expressionHandler())
                 .anyRequest().authenticated()
                 .and()
+
                 .exceptionHandling()
                 .authenticationEntryPoint(customAuthenticationEntryPoint())
                 .accessDeniedHandler(customAccessDeniedHandler())
@@ -51,12 +80,11 @@ public class SecurityConfig {
                 .formLogin(form -> form
                         .loginPage("/login")
                         .loginProcessingUrl("/login")
-                        .successHandler((request, response, authentication) ->
-                                response.setStatus(HttpStatus.OK.value()))
+                        .successHandler(new LoginSuccessHandler())
                         .failureHandler((request, response, exception) -> {
-                                    exception.printStackTrace();
-                                    response.setStatus(HttpStatus.UNAUTHORIZED.value());
-                                }))
+                            exception.printStackTrace();
+                            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                        }))
                 // oauth
                 .oauth2Login(oauth -> oauth
                         .loginPage("/login")
@@ -65,27 +93,31 @@ public class SecurityConfig {
                         .userService(oAuth2UserService()))
 
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new OtpValidationFilter(formMemberRepository, oAuthMemberRepository)
+                        , FilterSecurityInterceptor.class)
 
                 .csrf().disable();
 
         return http.build();
     }
 
-    private String[] getNonAuthPattern(){
-        return new String[] {"/login/**"
+    private String[] getNonAuthPattern() {
+        return new String[]{"/login/**"
                 , "/oauth2/**"
                 , "/auth/**"
                 , "/mail/**"
-                , "/favicon.ico"};
+                , "/favicon.ico"
+                , "/otp/**"};
     }
 
+
     @Bean
-    public CustomOAuth2UserService oAuth2UserService(){
+    public CustomOAuth2UserService oAuth2UserService() {
         return new CustomOAuth2UserService(oAuthMemberRepository);
     }
 
     @Bean
-    public FormUserDetailService userDetailsService(){
+    public FormUserDetailService userDetailsService() {
         return new FormUserDetailService(formMemberRepository);
     }
 
@@ -98,20 +130,47 @@ public class SecurityConfig {
     }
 
     @Bean
-    public JwtAuthenticationFilter jwtAuthenticationFilter(){
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
         return new JwtAuthenticationFilter(jwtTokenProvider);
     }
 
     @Bean
-    public AuthenticationEntryPointImpl customAuthenticationEntryPoint(){
+    public AuthenticationEntryPointImpl customAuthenticationEntryPoint() {
         return new AuthenticationEntryPointImpl();
     }
 
     @Bean
-    public AccessDeniedHandlerImpl customAccessDeniedHandler(){
+    public AccessDeniedHandlerImpl customAccessDeniedHandler() {
         return new AccessDeniedHandlerImpl();
     }
 
+    @Bean
+    public RoleHierarchy roleHierarchy() {
+        RoleHierarchyImpl hierarchy = new RoleHierarchyImpl();
+        hierarchy.setHierarchy("ROLE_ADMIN > ROLE_MANAGER\n" +
+                "ROLE_MANAGER > ROLE_MEMBER\n" +
+                "ROLE_MEMBER > ROLE_USER\n" +
+                "ROLE_USER > ROLE_PRE_AUTH_USER");
+        return hierarchy;
+    }
+
+    @Bean
+    public AccessDecisionManager accessDecisionManager() {
+        RoleHierarchyVoter roleHierarchyVoter = new RoleHierarchyVoter(roleHierarchy());
+        return new AffirmativeBased(Arrays.asList(roleHierarchyVoter));
+    }
+
+    @Bean
+    public SecurityExpressionHandler<FilterInvocation> expressionHandler() {
+        DefaultWebSecurityExpressionHandler webSecurityExpressionHandler = new DefaultWebSecurityExpressionHandler();
+        webSecurityExpressionHandler.setRoleHierarchy(roleHierarchy());
+        return webSecurityExpressionHandler;
+    }
+
+
+
+
+}
 //    OAuth JavaConfig
 //
 //    @Bean
@@ -189,4 +248,4 @@ public class SecurityConfig {
 //                .build();
 //    }
 
-}
+

@@ -14,8 +14,8 @@ public class CustomMailSender {
     public void send(String contents){
 
         SimpleMailMessage mailMessage = new SimpleMailMessage();
-        mailMessage.setTo("");
-        mailMessage.setSubject("[test]인증번호 전송");
+        mailMessage.setTo("kimhg93@gmail.com");
+        mailMessage.setSubject("[devgon]인증번호 전송");
         mailMessage.setText("인증번호 : " + contents);
         mailMessage.setFrom("no-reply@devgon.kro.kr");
 

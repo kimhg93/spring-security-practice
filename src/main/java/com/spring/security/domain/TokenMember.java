@@ -7,10 +7,15 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Id;
 
-@Entity(name = "OAUTH_MEMBERS")
+@Entity(name = "TOKEN_MEMBER")
 @Data
-public class OAuthMember extends Member{
+public class TokenMember {
 
-    private String oauthType;
+    @Id
+    private String id;
+    private String name;
+    private String refreshToken;
+    @Enumerated(EnumType.STRING)
+    private Role role;
 
 }

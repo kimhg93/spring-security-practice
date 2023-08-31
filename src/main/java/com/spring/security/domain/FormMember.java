@@ -9,13 +9,8 @@ import javax.persistence.Id;
 
 @Entity(name = "Members")
 @Data
-public class FormMember {
+public class FormMember extends Member{
 
-    @Id
-    private String id;
     private String password;
-    private String name;
-    @Enumerated(EnumType.STRING)
-    private Role role;
 
 }

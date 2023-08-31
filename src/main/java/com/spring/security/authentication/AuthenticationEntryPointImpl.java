@@ -15,8 +15,10 @@ public class AuthenticationEntryPointImpl implements AuthenticationEntryPoint {
     public void commence(HttpServletRequest request, HttpServletResponse response,
                          AuthenticationException e) throws IOException {
         log.error("401 Responding with unauthorized error. Message - {}", e.getMessage());
+        response.sendRedirect("/login");
         // 유효한 자격증명을 제공하지 않고 접근하려 할때 401
-        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, e.getMessage());
+        //response.sendError(HttpServletResponse.SC_UNAUTHORIZED, e.getMessage());
+
     }
 
 }

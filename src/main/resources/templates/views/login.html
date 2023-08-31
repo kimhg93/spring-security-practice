@@ -71,7 +71,7 @@
             body: formData
         };
         fetch("/login", option).then(response => {
-            if(response.status == 200) location.href = "/home";
+            if(response.status == 203) location.href = "/otp";
             else alert("로그인 실패");
         })
     };

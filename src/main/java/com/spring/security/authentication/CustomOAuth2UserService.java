@@ -58,13 +58,14 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         if (member.isPresent()) {
             OAuthMember m = member.get();
 
-            authorities.add(new SimpleGrantedAuthority("ROLE_" + m.getRole().toString()));
+            authorities.add(new SimpleGrantedAuthority("ROLE_PRE_AUTH_USER"));
 
             Map<String, Object> attributes = new HashMap<>();
 
             attributes.put("id", m.getId());
             attributes.put("username", m.getName());
             attributes.put("OAuthType", m.getOauthType());
+            attributes.put("authType", "OAuth");
 
             return new DefaultOAuth2User(
                     authorities,

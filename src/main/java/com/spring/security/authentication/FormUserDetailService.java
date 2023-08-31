@@ -27,11 +27,12 @@ public class FormUserDetailService implements UserDetailsService {
             FormUserDetail userDetail = new FormUserDetail();
 
             List<GrantedAuthority> authorities = new ArrayList<>();
-            authorities.add(new SimpleGrantedAuthority("ROLE_"+m.getRole().toString()));
+            authorities.add(new SimpleGrantedAuthority("ROLE_PRE_AUTH_USER"));
 
             Map<String, Object> map = new HashMap<>();
             map.put("id", m.getId());
             map.put("name", m.getName());
+            map.put("authType", "form");
 
             userDetail.setUsername(m.getId());
             userDetail.setAttributes(map);
