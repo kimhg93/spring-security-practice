@@ -14,8 +14,11 @@ public class Member {
     @Id
     private String id;
     private String name;
+    private String otpSecret;
 
     @Enumerated(EnumType.STRING)
     private Role role;
+
+
 
 }

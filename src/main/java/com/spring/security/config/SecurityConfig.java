@@ -88,7 +88,7 @@ public class SecurityConfig {
                 // oauth
                 .oauth2Login(oauth -> oauth
                         .loginPage("/login")
-                        .defaultSuccessUrl("/home")
+                        .defaultSuccessUrl("/otp")
                         .userInfoEndpoint()
                         .userService(oAuth2UserService()))
 
