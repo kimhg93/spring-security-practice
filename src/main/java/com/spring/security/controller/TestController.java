@@ -81,7 +81,7 @@ public class TestController {
     @CrossOrigin
     @GetMapping(value = "/auth/token")
     public ResponseEntity<JwtToken> generate(TokenMember tokenDto, HttpServletResponse res) {
-        log.info("generate controller: {}, {}", tokenDto.getId(), tokenDto.getName());
+        log.info("generate controller: {}, {}", tokenDto.getMember().getId(), tokenDto.getMember().getName());
 
         Map<String, Object> body = new HashMap<>();
         body.put("name", "name1234");
@@ -89,11 +89,11 @@ public class TestController {
         log.info(tokenDto.toString());
 
         FormUserDetail userDetail = new FormUserDetail();
-        userDetail.setUsername(tokenDto.getId());
+        userDetail.setUsername(tokenDto.getMember().getId());
         userDetail.setAuthorities(Collections.singleton(new SimpleGrantedAuthority("ROLE_ADMIN")));
 
 
-        Authentication authentication = new UsernamePasswordAuthenticationToken(userDetail, tokenDto.getName());
+        Authentication authentication = new UsernamePasswordAuthenticationToken(userDetail, tokenDto.getMember().getName());
 
 
         JwtToken jwtToken = jwtTokenProvider.generateToken(authentication, body);

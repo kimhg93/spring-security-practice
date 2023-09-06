@@ -1,30 +1,21 @@
 package com.spring.security.otp;
 
-import com.spring.security.authentication.FormUserDetail;
 import com.spring.security.domain.FormMember;
 import com.spring.security.domain.OAuthMember;
 import com.spring.security.mail.CustomMailSender;
 import com.spring.security.persistence.FormMemberRepository;
 import com.spring.security.persistence.OAuthMemberRepository;
-import com.sun.mail.iap.Response;
 import com.warrenstrange.googleauth.GoogleAuthenticator;
 import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.codec.binary.Base32;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.ModelAndView;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import java.math.BigInteger;
-import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.Optional;
 
 @RestController
 @RequiredArgsConstructor
@@ -46,14 +37,14 @@ public class OtpController {
             Optional<FormMember> member = formMemberRepository.findById(id);
             if(member.isPresent()){
                 FormMember formMember = member.get();
-                formMember.setOtpSecret(key);
+                formMember.getMember().setOtpSecret(key);
                 formMemberRepository.save(formMember);
             }
         } else {
             Optional<OAuthMember> member = oAuthMemberRepository.findById(id);
             if(member.isPresent()){
                 OAuthMember oAuthMember = member.get();
-                oAuthMember.setOtpSecret(key);
+                oAuthMember.getMember().setOtpSecret(key);
                 oAuthMemberRepository.save(oAuthMember);
             }
         }
@@ -77,13 +68,13 @@ public class OtpController {
             Optional<FormMember> member = formMemberRepository.findById(id);
             if(member.isPresent()){
                 FormMember formMember = member.get();
-                secret = formMember.getOtpSecret();
+                secret = formMember.getMember().getOtpSecret();
             }
         } else {
             Optional<OAuthMember> member = oAuthMemberRepository.findById(id);
             if(member.isPresent()){
                 OAuthMember oAuthMember = member.get();
-                secret = oAuthMember.getOtpSecret();
+                secret = oAuthMember.getMember().getOtpSecret();
             }
         }
 

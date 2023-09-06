@@ -48,11 +48,11 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         Optional<OAuthMember> member = oAuthMemberRepository.findByIdAndOauthType(id, registrationId);
 
-        return getOAuthUserService(user, member);
+        return getOAuthUserService(member);
     }
 
 
-    private DefaultOAuth2User getOAuthUserService(OAuth2User user, Optional<OAuthMember> member){
+    private DefaultOAuth2User getOAuthUserService(Optional<OAuthMember> member){
         List<GrantedAuthority> authorities = new ArrayList<>();
 
         if (member.isPresent()) {
@@ -62,8 +62,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
             Map<String, Object> attributes = new HashMap<>();
 
-            attributes.put("id", m.getId());
-            attributes.put("username", m.getName());
+            attributes.put("id", m.getMember().getId());
+            attributes.put("username", m.getMember().getName());
             attributes.put("OAuthType", m.getOauthType());
             attributes.put("authType", "OAuth");
 
@@ -72,6 +72,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     attributes,
                     "id");
 
-        } else throw new UsernameNotFoundException("User not found: " + member.orElse(null).getId());
+        } else throw new UsernameNotFoundException("User not found: " + member.orElse(null).getMember().getId());
     }
 }

@@ -12,8 +12,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDecisionManager;
 import org.springframework.security.access.expression.SecurityExpressionHandler;
-import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler;
-import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.access.vote.AffirmativeBased;
@@ -40,9 +38,12 @@ import java.util.Arrays;
 /**
  * id/pw
  * oAuth2 (kakao, naver, google, github)
- * jwt
- * sms
  * mail
+ * otp
+ * jwt
+ *
+ * sms
+ *
  * 인증서
  * xss
  * csrf
@@ -93,8 +94,8 @@ public class SecurityConfig {
                         .userService(oAuth2UserService()))
 
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(new OtpValidationFilter(formMemberRepository, oAuthMemberRepository)
-                        , FilterSecurityInterceptor.class)
+                .addFilterBefore(new OtpValidationFilter(formMemberRepository, oAuthMemberRepository),
+                        FilterSecurityInterceptor.class)
 
                 .csrf().disable();
 

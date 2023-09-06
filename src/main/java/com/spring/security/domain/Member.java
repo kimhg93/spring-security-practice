@@ -2,16 +2,14 @@ package com.spring.security.domain;
 
 import lombok.Data;
 
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.Id;
-import javax.persistence.MappedSuperclass;
+import javax.persistence.*;
 
-@MappedSuperclass
+@Entity(name = "MEMBERS")
 @Data
 public class Member {
 
     @Id
+    @Column(length = 100)
     private String id;
     private String name;
     private String otpSecret;
@@ -19,6 +17,14 @@ public class Member {
     @Enumerated(EnumType.STRING)
     private Role role;
 
+    @OneToOne(mappedBy = "member", cascade = CascadeType.ALL)
+    private FormMember formMember;
 
+    @OneToOne(mappedBy = "member", cascade = CascadeType.ALL)
+    private OAuthMember oauthMember;
 
+    @OneToOne(mappedBy = "member", cascade = CascadeType.ALL)
+    private TokenMember tokenMember;
+
+    // getters, setters, etc.
 }

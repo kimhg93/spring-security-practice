@@ -3,19 +3,23 @@ package com.spring.security.domain;
 import lombok.Data;
 
 import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import java.io.Serializable;
 
-@Entity(name = "TOKEN_MEMBER")
+@Entity(name = "TOKEN_MEMBERS")
 @Data
-public class TokenMember {
+public class TokenMember implements Serializable {
+
 
     @Id
     private String id;
-    private String name;
+
     private String refreshToken;
-    @Enumerated(EnumType.STRING)
-    private Role role;
+
+    @OneToOne
+    @JoinColumn(name = "id")
+    private Member member;
 
 }

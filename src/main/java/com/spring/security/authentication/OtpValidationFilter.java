@@ -55,7 +55,7 @@ public class OtpValidationFilter extends OncePerRequestFilter {
                 .anyMatch(r -> "ROLE_PRE_AUTH_USER".equalsIgnoreCase(r.toString()));
     }
 
-    // request 체크
+    // request url 체크
     private boolean validateRequest(HttpServletRequest request){
         return "/otp/valid".equals(request.getRequestURI())
                 && "GET".equalsIgnoreCase(request.getMethod());
@@ -71,13 +71,13 @@ public class OtpValidationFilter extends OncePerRequestFilter {
             Optional<FormMember> member = formMemberRepository.findById(auth.getName());
             if (member.isPresent()) {
                 FormMember formMember = member.get();
-                return gAuth.authorize(formMember.getOtpSecret(), code);
+                return gAuth.authorize(formMember.getMember().getOtpSecret(), code);
             }
         } else {
             Optional<OAuthMember> member = oAuthMemberRepository.findById(auth.getName());
             if (member.isPresent()) {
                 OAuthMember OAuthMember = member.get();
-                return gAuth.authorize(OAuthMember.getOtpSecret(), code);
+                return gAuth.authorize(OAuthMember.getMember().getOtpSecret(), code);
             }
         }
         return false;
@@ -106,7 +106,7 @@ public class OtpValidationFilter extends OncePerRequestFilter {
         if (member.isPresent()) {
             FormMember formMember = member.get();
             List<GrantedAuthority> authorities = new ArrayList<>();
-            authorities.add(new SimpleGrantedAuthority("ROLE_" + formMember.getRole()));
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + formMember.getMember().getRole()));
 
             FormUserDetail userDetails = (FormUserDetail) auth.getPrincipal();
             userDetails.setAuthorities(authorities);
@@ -124,7 +124,7 @@ public class OtpValidationFilter extends OncePerRequestFilter {
             OAuthMember oAuthMember = member.get();
 
             List<GrantedAuthority> authorities = new ArrayList<>();
-            authorities.add(new SimpleGrantedAuthority("ROLE_"+oAuthMember.getRole()));
+            authorities.add(new SimpleGrantedAuthority("ROLE_"+oAuthMember.getMember().getRole()));
 
             DefaultOAuth2User userDetails = (DefaultOAuth2User) auth.getPrincipal();
             DefaultOAuth2User user = new DefaultOAuth2User(authorities, userDetails.getAttributes(),"id");
